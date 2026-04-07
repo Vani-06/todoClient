@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Plus, Trash2, CheckCircle2, Circle, Calendar, BookOpen, Sparkles, Paintbrush } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Circle, Calendar, BookOpen } from 'lucide-react';
 import './App.css';
 
 const API_BASE_URL = 'http://localhost:5000/api/tasks';
@@ -13,6 +13,12 @@ function App() {
     type: 'routine',
     date: 'Everyday'
   });
+
+  // Date Logic
+  const today = new Date();
+  const dateString = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
+  const dayIndex = today.getDay(); // 0 (Su) to 6 (Sa)
+  const daysShort = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
   useEffect(() => {
     fetchTasks();
@@ -67,125 +73,149 @@ function App() {
   const nextTasks = tasks.filter(t => t.type === 'next');
 
   return (
-    <div className="app-container">
-      <header className="header">
-        <h1 className="logo">Hippo Tasks <span className="logo-emoji">🦛</span></h1>
-        <p className="subtitle">Stay adorable and organized!</p>
+    <div className="planner-sheet">
+      <header className="planner-header">
+        <div className="title-section">
+          <h1>To do list: Hippo Tasks 🦛</h1>
+        </div>
+        <div className="date-section">
+          <div className="date-text">{dateString}</div>
+          <div className="weekday-grid">
+            {daysShort.map((day, idx) => (
+              <span key={day} className={`day ${idx === dayIndex ? 'active' : ''}`}>
+                {day}
+              </span>
+            ))}
+          </div>
+        </div>
       </header>
 
-      <section className="form-section">
-        <form onSubmit={handleSubmit} className="task-form">
-          <div className="input-group">
+      <main className="planner-grid">
+        {/* Left Column: Brain Dump & Routine */}
+        <section className="brain-dump">
+          <h2 className="column-title">Brain dump... 🎀</h2>
+          
+          <form onSubmit={handleSubmit} className="task-form">
             <input
               type="text"
-              placeholder="What needs to be done? ✨"
+              placeholder="Write a task here..."
               value={formData.title}
               onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              className="title-input"
+              className="input-field"
             />
-          </div>
+            
+            <div className="form-row">
+              <select
+                value={formData.category}
+                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                className="input-field"
+              >
+                <option value="Academic 📚">Academic 📚</option>
+                <option value="Hygiene & Self Care 🛁">Hygiene & Self Care 🛁</option>
+                <option value="Hobbies 🎨">Hobbies 🎨</option>
+              </select>
 
-          <div className="form-row">
-            <select
-              value={formData.category}
-              onChange={(e) => setFormData({ ...formData, category: e.target.value })}
-              className="select-input"
-            >
-              <option value="Academic 📚">Academic 📚</option>
-              <option value="Hygiene & Self Care 🛁">Hygiene & Self Care 🛁</option>
-              <option value="Hobbies 🎨">Hobbies 🎨</option>
-            </select>
+              <select
+                value={formData.type}
+                onChange={(e) => {
+                  const type = e.target.value;
+                  setFormData({ 
+                    ...formData, 
+                    type, 
+                    date: type === 'routine' ? 'Everyday' : '' 
+                  });
+                }}
+                className="input-field"
+              >
+                <option value="routine">Daily Routine</option>
+                <option value="next">Task for Next</option>
+              </select>
+            </div>
 
-            <select
-              value={formData.type}
-              onChange={(e) => {
-                const type = e.target.value;
-                setFormData({ 
-                  ...formData, 
-                  type, 
-                  date: type === 'routine' ? 'Everyday' : '' 
-                });
-              }}
-              className="select-input"
-            >
-              <option value="routine">Daily Routine</option>
-              <option value="next">Task for Next</option>
-            </select>
-          </div>
-
-          {formData.type === 'next' && (
-            <div className="date-picker-group">
+            {formData.type === 'next' && (
               <input
                 type="date"
                 value={formData.date}
                 onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="date-input"
+                className="input-field"
               />
-            </div>
-          )}
+            )}
 
-          <button type="submit" className="submit-btn" disabled={!formData.title}>
-            <Plus size={20} /> Add Task
-          </button>
-        </form>
-      </section>
+            <button type="submit" className="submit-btn" disabled={!formData.title}>
+              <Plus size={18} /> Add to list
+            </button>
+          </form>
 
-      <main className="tasks-grid">
-        <div className="task-column">
-          <h2 className="column-title"><BookOpen size={20} /> Daily Routine</h2>
-          <div className="task-list">
+          <div className="lined-list">
             {routineTasks.map(task => (
-              <TaskItem 
-                key={task._id} 
-                task={task} 
-                onToggle={toggleComplete} 
-                onDelete={deleteTask} 
-              />
+              <div key={task._id} className={`routine-item ${task.completed ? 'completed' : ''}`}>
+                <input 
+                  type="checkbox" 
+                  checked={task.completed} 
+                  onChange={() => toggleComplete(task._id, task.completed)}
+                  className="checkbox-custom"
+                />
+                <span>{task.title}</span>
+                <button onClick={() => deleteTask(task._id)} className="delete-btn">
+                  <Trash2 size={14} />
+                </button>
+              </div>
             ))}
-            {routineTasks.length === 0 && <p className="empty-msg">No routine tasks yet! 🌸</p>}
+            {routineTasks.length === 0 && <p className="empty-msg">No routine tasks written yet...</p>}
           </div>
-        </div>
+        </section>
 
-        <div className="task-column">
-          <h2 className="column-title"><Calendar size={20} /> Upcoming / Next</h2>
-          <div className="task-list">
-            {nextTasks.map(task => (
-              <TaskItem 
-                key={task._id} 
-                task={task} 
-                onToggle={toggleComplete} 
-                onDelete={deleteTask} 
-              />
+        {/* Right Column: Upcoming Stickies */}
+        <section className="upcoming-section">
+          <h2 className="column-title">Upcoming / Next ☁️</h2>
+          
+          {/* Categorized Sticky Notes */}
+          <div className="sticky-note pink">
+            <h3 className="sticky-hdr">Academic Needs</h3>
+            {nextTasks.filter(t => t.category === 'Academic 📚').map(task => (
+              <StickyTask key={task._id} task={task} onToggle={toggleComplete} onDelete={deleteTask} />
             ))}
-            {nextTasks.length === 0 && <p className="empty-msg">Nothing coming up! ☁️</p>}
           </div>
-        </div>
+
+          <div className="sticky-note taupe">
+            <h3 className="sticky-hdr">Self-Care</h3>
+            {nextTasks.filter(t => t.category === 'Hygiene & Self Care 🛁').map(task => (
+              <StickyTask key={task._id} task={task} onToggle={toggleComplete} onDelete={deleteTask} />
+            ))}
+          </div>
+
+          <div className="sticky-note yellow">
+            <h3 className="sticky-hdr">Hobbies & Fun</h3>
+            {nextTasks.filter(t => t.category === 'Hobbies 🎨').map(task => (
+              <StickyTask key={task._id} task={task} onToggle={toggleComplete} onDelete={deleteTask} />
+            ))}
+          </div>
+
+          {nextTasks.length === 0 && <p className="empty-msg">No upcoming tasks today!</p>}
+        </section>
       </main>
     </div>
   );
 }
 
-function TaskItem({ task, onToggle, onDelete }) {
+function StickyTask({ task, onToggle, onDelete }) {
   return (
-    <div className={`task-card ${task.completed ? 'completed' : ''}`}>
-      <div className="task-content">
-        <button 
-          onClick={() => onToggle(task._id, task.completed)} 
-          className="check-btn"
-        >
-          {task.completed ? <CheckCircle2 size={24} className="icon-pink" /> : <Circle size={24} />}
-        </button>
-        <div className="task-details">
-          <h3 className="task-title">{task.title}</h3>
-          <div className="task-meta">
-            <span className="badge">{task.category}</span>
-            {task.type === 'next' && <span className="date-badge">📅 {task.date}</span>}
-          </div>
-        </div>
+    <div className={`sticky-task-item ${task.completed ? 'completed' : ''}`}>
+      <div className="sticky-title">
+        <input 
+          type="checkbox" 
+          checked={task.completed} 
+          onChange={() => onToggle(task._id, task.completed)}
+          className="checkbox-custom"
+        />
+        {task.title}
       </div>
-      <button onClick={() => onDelete(task._id)} className="delete-btn">
-        <Trash2 size={20} />
-      </button>
+      <div className="sticky-meta">
+        <span>📅 {task.date}</span>
+        <button onClick={() => onDelete(task._id)} className="delete-btn">
+          <Trash2 size={12} />
+        </button>
+      </div>
     </div>
   );
 }
