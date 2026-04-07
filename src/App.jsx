@@ -89,6 +89,10 @@ function App() {
   const routineTasks = tasks.filter(t => t.type === 'routine');
   const nextTasks = tasks.filter(t => t.type === 'next');
 
+  // Global Streak Stats
+  const totalStreaks = routineTasks.reduce((sum, t) => sum + (t.streak || 0), 0);
+  const activeHabits = routineTasks.filter(t => t.streak > 0).length;
+
   return (
     <div className="planner-sheet">
       <header className="planner-header">
@@ -106,6 +110,20 @@ function App() {
           </div>
         </div>
       </header>
+
+      {/* Streak Stats Summary */}
+      <div className="streak-stats-row">
+        <div className="stat-card">
+          <span className="stat-label">Total 🔥 Collected:</span>
+          <span className="stat-value">{totalStreaks}</span>
+        </div>
+        <div className="stat-card">
+          <span className="stat-label">Active Habits:</span>
+          <span className="stat-value">{activeHabits}</span>
+        </div>
+        <div className="stat-card decor">
+        </div>
+      </div>
 
       <main className="planner-grid">
         {/* Left Column: Brain Dump & Routine */}
