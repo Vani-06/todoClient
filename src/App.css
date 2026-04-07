@@ -5,8 +5,8 @@
   --accent-yellow: #EBDCA3;
   --text-main: #4A4A4A;
   --text-faded: #8E8E8E;
-  --handwriting: 'Kalam', cursive;
-  --script: 'Caveat', cursive;
+  --handwriting: 'Nunito', sans-serif;
+  --script: 'Pangolin', cursive;
   --paper-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
   --line-color: rgba(168, 139, 141, 0.2);
 }
