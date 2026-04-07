@@ -69,7 +69,7 @@ function App() {
   return (
     <div className="app-container">
       <header className="header">
-        <h1 className="logo">Hippo Tasks 🐘</h1>
+        <h1 className="logo">Hippo Tasks <span className="logo-emoji">🦛</span></h1>
         <p className="subtitle">Stay adorable and organized!</p>
       </header>
 

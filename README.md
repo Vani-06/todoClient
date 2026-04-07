@@ -1,4 +1,4 @@
-# Hippo Tasks Frontend 🐘
+# Hippo Tasks Frontend 🦛
 
 The user interface for Hippo Tasks, built with React and Vite. It features an adorable, modern "Hippo" theme with a simple, yet robust, task management system.
 
