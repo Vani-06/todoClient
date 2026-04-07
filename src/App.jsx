@@ -192,6 +192,7 @@ function App() {
                   className="checkbox-custom"
                 />
                 <span>{task.title}</span>
+                {task.streak > 0 && <span className="streak-tag">🔥 {task.streak}</span>}
                 <button onClick={() => deleteTask(task._id)} className="delete-btn">
                   <Trash2 size={14} />
                 </button>
