@@ -4,12 +4,17 @@ import { Plus, Trash2, CheckCircle2, Circle, Calendar, BookOpen } from 'lucide-r
 import './App.css';
 
 const API_BASE_URL = 'http://localhost:5000/api/tasks';
+const DEFAULT_CATEGORIES = ['Academic 📚', 'Hygiene & Self Care 🛁', 'Hobbies 🎨'];
 
 function App() {
   const [tasks, setTasks] = useState([]);
+  const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
+  const [showCustomInput, setShowCustomInput] = useState(false);
+  const [customCategory, setCustomCategory] = useState('');
+  
   const [formData, setFormData] = useState({
     title: '',
-    category: 'Academic 📚',
+    category: DEFAULT_CATEGORIES[0],
     type: 'routine',
     date: 'Everyday'
   });
@@ -27,7 +32,13 @@ function App() {
   const fetchTasks = async () => {
     try {
       const response = await axios.get(API_BASE_URL);
-      setTasks(response.data);
+      const fetchedTasks = response.data;
+      setTasks(fetchedTasks);
+
+      // Dynamic Category Extraction
+      const uniqueFetched = [...new Set(fetchedTasks.map(t => t.category))];
+      const merged = [...new Set([...DEFAULT_CATEGORIES, ...uniqueFetched])];
+      setCategories(merged);
     } catch (error) {
       console.error('Error fetching tasks:', error);
     }
@@ -37,14 +48,20 @@ function App() {
     e.preventDefault();
     if (!formData.title) return;
 
+    // Use custom category if provided
+    const finalCategory = showCustomInput ? customCategory : formData.category;
+    if (showCustomInput && !customCategory) return;
+
     try {
-      await axios.post(API_BASE_URL, formData);
+      await axios.post(API_BASE_URL, { ...formData, category: finalCategory });
       setFormData({
         title: '',
-        category: 'Academic 📚',
+        category: finalCategory, // Keep the last used category
         type: 'routine',
         date: 'Everyday'
       });
+      setCustomCategory('');
+      setShowCustomInput(false);
       fetchTasks();
     } catch (error) {
       console.error('Error adding task:', error);
@@ -106,13 +123,21 @@ function App() {
             
             <div className="form-row">
               <select
-                value={formData.category}
-                onChange={(e) => setFormData({ ...formData, category: e.target.value })}
+                value={showCustomInput ? 'ADD_CUSTOM' : formData.category}
+                onChange={(e) => {
+                  if (e.target.value === 'ADD_CUSTOM') {
+                    setShowCustomInput(true);
+                  } else {
+                    setShowCustomInput(false);
+                    setFormData({ ...formData, category: e.target.value });
+                  }
+                }}
                 className="input-field"
               >
-                <option value="Academic 📚">Academic 📚</option>
-                <option value="Hygiene & Self Care 🛁">Hygiene & Self Care 🛁</option>
-                <option value="Hobbies 🎨">Hobbies 🎨</option>
+                {categories.map(cat => (
+                  <option key={cat} value={cat}>{cat}</option>
+                ))}
+                <option value="ADD_CUSTOM">➕ Add Custom Category...</option>
               </select>
 
               <select
@@ -131,6 +156,17 @@ function App() {
                 <option value="next">Task for Next</option>
               </select>
             </div>
+
+            {showCustomInput && (
+              <input
+                type="text"
+                placeholder="Category name (e.g. Cooking 🍳)"
+                value={customCategory}
+                onChange={(e) => setCustomCategory(e.target.value)}
+                className="input-field custom-cat-input"
+                autoFocus
+              />
+            )}
 
             {formData.type === 'next' && (
               <input
@@ -170,26 +206,22 @@ function App() {
           <h2 className="column-title">Upcoming / Next ☁️</h2>
           
           {/* Categorized Sticky Notes */}
-          <div className="sticky-note pink">
-            <h3 className="sticky-hdr">Academic Needs</h3>
-            {nextTasks.filter(t => t.category === 'Academic 📚').map(task => (
-              <StickyTask key={task._id} task={task} onToggle={toggleComplete} onDelete={deleteTask} />
-            ))}
-          </div>
+          {categories.map((cat, index) => {
+            const catTasks = nextTasks.filter(t => t.category === cat);
+            if (catTasks.length === 0) return null;
 
-          <div className="sticky-note taupe">
-            <h3 className="sticky-hdr">Self-Care</h3>
-            {nextTasks.filter(t => t.category === 'Hygiene & Self Care 🛁').map(task => (
-              <StickyTask key={task._id} task={task} onToggle={toggleComplete} onDelete={deleteTask} />
-            ))}
-          </div>
+            // Cycle colors for stickies
+            const colorClass = index % 3 === 0 ? 'pink' : index % 3 === 1 ? 'taupe' : 'yellow';
 
-          <div className="sticky-note yellow">
-            <h3 className="sticky-hdr">Hobbies & Fun</h3>
-            {nextTasks.filter(t => t.category === 'Hobbies 🎨').map(task => (
-              <StickyTask key={task._id} task={task} onToggle={toggleComplete} onDelete={deleteTask} />
-            ))}
-          </div>
+            return (
+              <div key={cat} className={`sticky-note ${colorClass}`}>
+                <h3 className="sticky-hdr">{cat}</h3>
+                {catTasks.map(task => (
+                  <StickyTask key={task._id} task={task} onToggle={toggleComplete} onDelete={deleteTask} />
+                ))}
+              </div>
+            );
+          })}
 
           {nextTasks.length === 0 && <p className="empty-msg">No upcoming tasks today!</p>}
         </section>
