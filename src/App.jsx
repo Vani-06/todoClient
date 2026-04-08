@@ -3,7 +3,7 @@ import axios from 'axios';
 import { Plus, Trash2, CheckCircle2, Circle, Calendar, BookOpen } from 'lucide-react';
 import './App.css';
 
-const API_BASE_URL = 'http://localhost:5000/api/tasks';
+const API_BASE_URL = 'https://todoserver-qexi.onrender.com/api/tasks';
 const DEFAULT_CATEGORIES = ['Academic 📚', 'Hygiene & Self Care 🛁', 'Hobbies 🎨'];
 
 function App() {
