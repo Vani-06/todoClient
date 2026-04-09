@@ -7,10 +7,16 @@ const API_BASE_URL = 'https://todoserver-qexi.onrender.com/api/tasks';
 const DEFAULT_CATEGORIES = ['Academic 📚', 'Hygiene & Self Care 🛁', 'Hobbies 🎨'];
 
 function App() {
+  const [currentUser, setCurrentUser] = useState(() => {
+    const saved = localStorage.getItem('hippoUser');
+    return saved ? JSON.parse(saved) : null;
+  });
   const [tasks, setTasks] = useState([]);
   const [categories, setCategories] = useState(DEFAULT_CATEGORIES);
   const [showCustomInput, setShowCustomInput] = useState(false);
   const [customCategory, setCustomCategory] = useState('');
+  const [authFormData, setAuthFormData] = useState({ name: '', pin: '' });
+  const [loginError, setLoginError] = useState('');
   
   const [formData, setFormData] = useState({
     title: '',
@@ -35,12 +41,16 @@ function App() {
   const daysShort = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
 
   useEffect(() => {
-    fetchTasks();
-  }, []);
+    if (currentUser) {
+      fetchTasks();
+    }
+  }, [currentUser]);
 
   const fetchTasks = async () => {
     try {
-      const response = await axios.get(API_BASE_URL);
+      const response = await axios.get(API_BASE_URL, {
+        headers: { 'x-user-id': currentUser._id }
+      });
       const fetchedTasks = response.data;
       setTasks(fetchedTasks);
 
@@ -62,7 +72,10 @@ function App() {
     if (showCustomInput && !customCategory) return;
 
     try {
-      await axios.post(API_BASE_URL, { ...formData, category: finalCategory });
+      await axios.post(API_BASE_URL, 
+        { ...formData, category: finalCategory },
+        { headers: { 'x-user-id': currentUser._id } }
+      );
       setFormData({
         title: '',
         category: finalCategory, // Keep the last used category
@@ -79,12 +92,13 @@ function App() {
 
   const toggleComplete = async (task) => {
     try {
+      const headers = { 'x-user-id': currentUser._id };
       if (task.type === 'next') {
         // Feature: Auto-Delete on Check for "next" tasks
-        await axios.delete(`${API_BASE_URL}/${task._id}`);
+        await axios.delete(`${API_BASE_URL}/${task._id}`, { headers });
       } else {
         // Standard PUT for "routine" tasks
-        await axios.put(`${API_BASE_URL}/${task._id}`, { completed: !task.completed });
+        await axios.put(`${API_BASE_URL}/${task._id}`, { completed: !task.completed }, { headers });
       }
       // Freshly fetch tasks to ensure the UI is in sync with the server
       fetchTasks();
@@ -95,11 +109,32 @@ function App() {
 
   const deleteTask = async (id) => {
     try {
-      await axios.delete(`${API_BASE_URL}/${id}`);
+      await axios.delete(`${API_BASE_URL}/${id}`, {
+        headers: { 'x-user-id': currentUser._id }
+      });
       fetchTasks();
     } catch (error) {
       console.error('Error deleting task:', error);
     }
+  };
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+    setLoginError('');
+    try {
+      const response = await axios.post(`${API_BASE_URL.replace('/tasks', '/auth')}/login`, authFormData);
+      const user = response.data;
+      setCurrentUser(user);
+      localStorage.setItem('hippoUser', JSON.stringify(user));
+    } catch (error) {
+      setLoginError(error.response?.data?.message || 'Login failed. Please try again.');
+    }
+  };
+
+  const handleLogout = () => {
+    setCurrentUser(null);
+    localStorage.removeItem('hippoUser');
+    setTasks([]);
   };
 
   const routineTasks = tasks.filter(t => t.type === 'routine');
@@ -114,12 +149,47 @@ function App() {
   const totalStreaks = routineTasks.reduce((sum, t) => sum + (t.streak || 0), 0);
   const activeHabits = routineTasks.filter(t => t.streak > 0).length;
 
+  if (!currentUser) {
+    return (
+      <div className="login-overlay">
+        <div className="login-box">
+          <h2>Hippo Tasks 🦛</h2>
+          <p>Sign in to see your private planner</p>
+          
+          {loginError && <div className="error-msg">{loginError}</div>}
+          
+          <form onSubmit={handleLogin} className="login-form">
+            <input
+              type="text"
+              placeholder="Your Name"
+              value={authFormData.name}
+              onChange={(e) => setAuthFormData({ ...authFormData, name: e.target.value })}
+              className="input-field"
+              required
+            />
+            <input
+              type="password"
+              placeholder="4-Digit PIN"
+              maxLength={4}
+              value={authFormData.pin}
+              onChange={(e) => setAuthFormData({ ...authFormData, pin: e.target.value })}
+              className="input-field"
+              required
+            />
+            <button type="submit" className="submit-btn">Enter Planner</button>
+          </form>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="planner-sheet">
       <header className="planner-header">
         <div className="title-section">
           <h1>To do list: Hippo Tasks 🦛</h1>
         </div>
+        <button onClick={handleLogout} className="logout-btn">Log Out</button>
         <div className="date-section">
           <div className="date-text">{dateString}</div>
           <div className="weekday-grid">
