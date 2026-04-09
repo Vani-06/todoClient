@@ -386,6 +386,7 @@ function App() {
                       onExpand={(e) => toggleExpand(e, task._id)}
                       isExpanded={expandedTasks.includes(task._id)}
                       isOverdue={task.date && task.date < todayString}
+                      isToday={task.date === todayString}
                     >
                       {/* Permanent Display Area (Inline) */}
                       <TaskSubItems 
@@ -415,9 +416,9 @@ function App() {
   );
 }
 
-function StickyTask({ task, onToggle, onDelete, isOverdue, onExpand, isExpanded, children }) {
+function StickyTask({ task, onToggle, onDelete, isOverdue, isToday, onExpand, isExpanded, children }) {
   return (
-    <div className={`sticky-task-item ${task.completed ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}`}>
+    <div className={`sticky-task-item ${task.completed ? 'completed' : ''} ${isOverdue ? 'overdue' : ''} ${isToday ? 'task-today' : ''}`}>
       <div className="sticky-title">
         <input 
           type="checkbox" 

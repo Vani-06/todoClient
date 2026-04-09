@@ -332,6 +332,15 @@ body {
   opacity: 0.6;
 }
 
+.task-today {
+  background-color: #FFF8D6;
+  border-radius: 6px;
+  padding: 8px;
+  border-bottom: none !important; /* Remove dotted line for a clean highlighter look */
+  margin-bottom: 15px; /* Slightly more margin to breathe */
+  box-shadow: 2px 2px 5px rgba(0,0,0,0.02); /* Very subtle depth */
+}
+
 .sticky-task-item.overdue .sticky-title {
   color: #A85C5C; /* Muted red/burgundy */
   font-weight: 700;
