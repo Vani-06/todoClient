@@ -218,19 +218,26 @@ body {
 
 /* Lined List Style */
 .lined-list {
-  background-image: linear-gradient(var(--line-color) 1px, transparent 1px);
-  background-size: 100% 45px;
-  line-height: 45px;
+  /* Removed background ruled lines that were cutting through tasks */
   min-height: 200px;
 }
 
 .routine-item {
   display: flex;
   align-items: center;
-  gap: 15px;
-  height: 45px;
-  padding: 0 5px;
+  justify-content: space-between;
+  padding: 12px 0;
   position: relative;
+}
+
+.task-info-left, .task-actions-right {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+}
+
+.task-actions-right {
+  gap: 5px; /* Tighter gap for actions */
 }
 
 .expand-toggle {
@@ -253,9 +260,8 @@ body {
 }
 
 .routine-item-wrapper {
-  margin-bottom: 5px;
-  border-bottom: 1px dotted var(--line-color);
-  padding-bottom: 10px;
+  border-bottom: 1px dashed #d1c7c7; /* Clean divider mimicking ruled paper */
+  padding-bottom: 5px;
 }
 
 .routine-item.completed span {

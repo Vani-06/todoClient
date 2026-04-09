@@ -316,26 +316,31 @@ function App() {
               <div key={task._id} className="task-container">
                 <div className={`routine-item-wrapper ${task.completed ? 'completed' : ''}`}>
                   <div className="routine-item">
-                    <button 
-                      onClick={(e) => toggleExpand(e, task._id)} 
-                      className={`expand-toggle ${expandedTasks.includes(task._id) ? 'open' : ''}`}
-                    >
-                      🔽
-                    </button>
-                    <input 
-                      type="checkbox" 
-                      checked={task.completed} 
-                      onChange={() => toggleComplete(task)}
-                      className="checkbox-custom"
-                    />
-                    <span className="task-title-text">{task.title}</span>
-                    {task.streak > 0 && <span className="streak-tag">🔥 {task.streak}</span>}
-                    <button 
-                      onClick={(e) => deleteTask(e, task._id)} 
-                      className="delete-btn"
-                    >
-                      <Trash2 size={20} />
-                    </button>
+                    <div className="task-info-left">
+                      <input 
+                        type="checkbox" 
+                        checked={task.completed} 
+                        onChange={() => toggleComplete(task)}
+                        className="checkbox-custom"
+                      />
+                      <span className="task-title-text">{task.title}</span>
+                      {task.streak > 0 && <span className="streak-tag">🔥 {task.streak}</span>}
+                    </div>
+
+                    <div className="task-actions-right">
+                      <button 
+                        onClick={(e) => toggleExpand(e, task._id)} 
+                        className={`expand-toggle ${expandedTasks.includes(task._id) ? 'open' : ''}`}
+                      >
+                        🔽
+                      </button>
+                      <button 
+                        onClick={(e) => deleteTask(e, task._id)} 
+                        className="delete-btn"
+                      >
+                        <Trash2 size={20} />
+                      </button>
+                    </div>
                   </div>
 
                   {/* Permanent Display Area (Inline) */}
