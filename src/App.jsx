@@ -138,7 +138,8 @@ function App() {
     setTasks([]);
   };
 
-  const toggleExpand = (id) => {
+  const toggleExpand = (e, id) => {
+    e.stopPropagation();
     setExpandedTasks(prev => 
       prev.includes(id) ? prev.filter(tid => tid !== id) : [...prev, id]
     );
@@ -314,7 +315,7 @@ function App() {
               <div key={task._id} className="task-container">
                 <div className={`routine-item ${task.completed ? 'completed' : ''}`}>
                   <button 
-                    onClick={() => toggleExpand(task._id)} 
+                    onClick={(e) => toggleExpand(e, task._id)} 
                     className={`expand-toggle ${expandedTasks.includes(task._id) ? 'open' : ''}`}
                   >
                     🔽
@@ -368,7 +369,7 @@ function App() {
                       task={task} 
                       onToggle={toggleComplete} 
                       onDelete={deleteTask} 
-                      onExpand={() => toggleExpand(task._id)}
+                      onExpand={(e) => toggleExpand(e, task._id)}
                       isExpanded={expandedTasks.includes(task._id)}
                       isOverdue={task.date && task.date < todayString}
                     />
@@ -426,13 +427,15 @@ function TaskDetails({ task, onUpdate }) {
 
   const handleAddSubtask = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!newSubtask) return;
     const updatedSubtasks = [...(task.subtasks || []), { title: newSubtask, completed: false }];
     onUpdate({ subtasks: updatedSubtasks });
     setNewSubtask('');
   };
 
-  const toggleSubtask = (index) => {
+  const toggleSubtask = (e, index) => {
+    e.stopPropagation();
     const updatedSubtasks = [...task.subtasks];
     updatedSubtasks[index].completed = !updatedSubtasks[index].completed;
     onUpdate({ subtasks: updatedSubtasks });
@@ -440,69 +443,82 @@ function TaskDetails({ task, onUpdate }) {
 
   const handleAddLink = (e) => {
     e.preventDefault();
+    e.stopPropagation();
     if (!newLink) return;
     const updatedLinks = [...(task.links || []), newLink];
     onUpdate({ links: updatedLinks });
     setNewLink('');
   };
 
-  const removeLink = (index) => {
+  const removeLink = (e, index) => {
+    e.stopPropagation();
     const updatedLinks = task.links.filter((_, i) => i !== index);
     onUpdate({ links: updatedLinks });
   };
 
   return (
-    <div className="task-details">
+    <div className="task-details" onClick={(e) => e.stopPropagation()}>
       <div className="subtasks-section">
         <span className="details-subtitle">Subtasks:</span>
+        <form onSubmit={handleAddSubtask} className="mini-input-group">
+          <input 
+            type="text" 
+            placeholder="New subtask..." 
+            value={newSubtask}
+            onChange={(e) => {
+              e.stopPropagation();
+              setNewSubtask(e.target.value);
+            }}
+            className="mini-input"
+          />
+          <button type="submit" className="mini-add-btn">+</button>
+        </form>
         <div className="subtasks-list">
           {task.subtasks?.map((sub, idx) => (
             <div key={idx} className={`subtask-item ${sub.completed ? 'completed' : ''}`}>
               <input 
                 type="checkbox" 
                 checked={sub.completed} 
-                onChange={() => toggleSubtask(idx)}
+                onChange={(e) => toggleSubtask(e, idx)}
                 className="checkbox-tiny"
               />
               <span>{sub.title}</span>
             </div>
           ))}
         </div>
-        <form onSubmit={handleAddSubtask} className="mini-input-group">
-          <input 
-            type="text" 
-            placeholder="New subtask..." 
-            value={newSubtask}
-            onChange={(e) => setNewSubtask(e.target.value)}
-            className="mini-input"
-          />
-          <button type="submit" className="mini-add-btn">+</button>
-        </form>
       </div>
 
       <div className="links-section">
         <span className="details-subtitle">Documents & Links:</span>
-        <div className="links-list">
-          {task.links?.map((link, idx) => (
-            <div key={idx} className="link-item">
-              <span>🔗</span>
-              <a href={link.startsWith('http') ? link : `https://${link}`} target="_blank" rel="noreferrer">
-                {link}
-              </a>
-              <button onClick={() => removeLink(idx)} className="delete-mini">x</button>
-            </div>
-          ))}
-        </div>
         <form onSubmit={handleAddLink} className="mini-input-group">
           <input 
             type="text" 
             placeholder="Add URL..." 
             value={newLink}
-            onChange={(e) => setNewLink(e.target.value)}
+            onChange={(e) => {
+              e.stopPropagation();
+              setNewLink(e.target.value);
+            }}
             className="mini-input"
           />
           <button type="submit" className="mini-add-btn">+</button>
         </form>
+        <div className="links-list">
+          {task.links?.map((link, idx) => (
+            <div key={idx} className="link-item">
+              <span>🔗</span>
+              <a 
+                href={link.startsWith('http') ? link : `https://${link}`} 
+                target="_blank" 
+                rel="noreferrer"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {link}
+              </a>
+              <button onClick={(e) => removeLink(e, idx)} className="delete-mini">x</button>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
   );
