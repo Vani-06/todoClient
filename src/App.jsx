@@ -20,7 +20,16 @@ function App() {
   });
 
   // Date Logic
+  const getTodayString = () => {
+    const d = new Date();
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   const today = new Date();
+  const todayString = getTodayString();
   const dateString = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   const dayIndex = today.getDay(); // 0 (Su) to 6 (Sa)
   const daysShort = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -68,11 +77,16 @@ function App() {
     }
   };
 
-  const toggleComplete = async (id, currentStatus) => {
+  const toggleComplete = async (task) => {
     try {
-      // Send the toggled status to the backend
-      await axios.put(`${API_BASE_URL}/${id}`, { completed: !currentStatus });
-      // Freshly fetch tasks to ensure the UI is in sync with the server's record and streak logic
+      if (task.type === 'next') {
+        // Feature: Auto-Delete on Check for "next" tasks
+        await axios.delete(`${API_BASE_URL}/${task._id}`);
+      } else {
+        // Standard PUT for "routine" tasks
+        await axios.put(`${API_BASE_URL}/${task._id}`, { completed: !task.completed });
+      }
+      // Freshly fetch tasks to ensure the UI is in sync with the server
       fetchTasks();
     } catch (error) {
       console.error('Error toggling task:', error);
@@ -92,6 +106,9 @@ function App() {
   const nextTasks = tasks
     .filter(t => t.type === 'next')
     .sort((a, b) => new Date(a.date) - new Date(b.date));
+
+  // Overdue Logic
+  const overdueCount = nextTasks.filter(t => t.date && t.date < todayString).length;
 
   // Global Streak Stats
   const totalStreaks = routineTasks.reduce((sum, t) => sum + (t.streak || 0), 0);
@@ -210,7 +227,7 @@ function App() {
                 <input 
                   type="checkbox" 
                   checked={task.completed} 
-                  onChange={() => toggleComplete(task._id, task.completed)}
+                  onChange={() => toggleComplete(task)}
                   className="checkbox-custom"
                 />
                 <span>{task.title}</span>
@@ -226,7 +243,10 @@ function App() {
 
         {/* Right Column: Upcoming Stickies */}
         <section className="upcoming-section">
-          <h2 className="column-title">Upcoming / Next ☁️</h2>
+          <h2 className="column-title">
+            Upcoming / Next ☁️
+            {overdueCount > 0 && <span className="overdue-counter">🚨 {overdueCount} Overdue</span>}
+          </h2>
           
           {/* Categorized Sticky Notes */}
           {categories.map((cat, index) => {
@@ -240,7 +260,13 @@ function App() {
               <div key={cat} className={`sticky-note ${colorClass}`}>
                 <h3 className="sticky-hdr">{cat}</h3>
                 {catTasks.map(task => (
-                  <StickyTask key={task._id} task={task} onToggle={toggleComplete} onDelete={deleteTask} />
+                  <StickyTask 
+                    key={task._id} 
+                    task={task} 
+                    onToggle={toggleComplete} 
+                    onDelete={deleteTask} 
+                    isOverdue={task.date && task.date < todayString}
+                  />
                 ))}
               </div>
             );
@@ -253,16 +279,17 @@ function App() {
   );
 }
 
-function StickyTask({ task, onToggle, onDelete }) {
+function StickyTask({ task, onToggle, onDelete, isOverdue }) {
   return (
-    <div className={`sticky-task-item ${task.completed ? 'completed' : ''}`}>
+    <div className={`sticky-task-item ${task.completed ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}`}>
       <div className="sticky-title">
         <input 
           type="checkbox" 
           checked={task.completed} 
-          onChange={() => onToggle(task._id, task.completed)}
+          onChange={() => onToggle(task)}
           className="checkbox-custom"
         />
+        {isOverdue && <span className="overdue-icon">‼️</span>}
         {task.title}
       </div>
       <div className="sticky-meta">

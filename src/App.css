@@ -279,6 +279,23 @@ body {
   opacity: 0.6;
 }
 
+.sticky-task-item.overdue .sticky-title {
+  color: #A85C5C; /* Muted red/burgundy */
+  font-weight: 700;
+}
+
+.overdue-icon {
+  margin-right: 5px;
+  animation: shake 0.5s ease-in-out infinite;
+  display: inline-block;
+}
+
+@keyframes shake {
+  0%, 100% { transform: rotate(0deg); }
+  25% { transform: rotate(-10deg); }
+  75% { transform: rotate(10deg); }
+}
+
 .sticky-title {
   font-size: 1.1rem;
   display: flex;
@@ -305,6 +322,19 @@ body {
 .delete-btn:hover {
   opacity: 1;
   color: var(--accent-pink);
+}
+
+.overdue-counter {
+  font-size: 0.9rem;
+  background: #f7e8e8;
+  color: #A85C5C;
+  padding: 4px 10px;
+  border-radius: 20px;
+  border: 1px solid #A85C5C;
+  font-family: var(--handwriting);
+  margin-left: 15px;
+  font-weight: 700;
+  box-shadow: 2px 2px 5px rgba(168, 92, 92, 0.1);
 }
 
 .streak-tag {
