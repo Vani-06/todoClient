@@ -205,11 +205,11 @@ function App() {
 
   return (
     <div className="planner-sheet">
+      <button onClick={handleLogout} className="logout-btn">Log Out</button>
       <header className="planner-header">
         <div className="title-section">
           <h1>To do list: Hippo Tasks 🦛</h1>
         </div>
-        <button onClick={handleLogout} className="logout-btn">Log Out</button>
         <div className="date-section">
           <div className="date-text">{dateString}</div>
           <div className="weekday-grid">
@@ -314,43 +314,45 @@ function App() {
           <div className="lined-list">
             {routineTasks.map(task => (
               <div key={task._id} className="task-container">
-                <div className={`routine-item ${task.completed ? 'completed' : ''}`}>
-                  <button 
-                    onClick={(e) => toggleExpand(e, task._id)} 
-                    className={`expand-toggle ${expandedTasks.includes(task._id) ? 'open' : ''}`}
-                  >
-                    🔽
-                  </button>
-                  <input 
-                    type="checkbox" 
-                    checked={task.completed} 
-                    onChange={() => toggleComplete(task)}
-                    className="checkbox-custom"
-                  />
-                  <span className="task-title-text">{task.title}</span>
-                  {task.streak > 0 && <span className="streak-tag">🔥 {task.streak}</span>}
-                  <button 
-                    onClick={(e) => deleteTask(e, task._id)} 
-                    className="delete-btn"
-                  >
-                    <Trash2 size={20} />
-                  </button>
-                </div>
+                <div className={`routine-item-wrapper ${task.completed ? 'completed' : ''}`}>
+                  <div className="routine-item">
+                    <button 
+                      onClick={(e) => toggleExpand(e, task._id)} 
+                      className={`expand-toggle ${expandedTasks.includes(task._id) ? 'open' : ''}`}
+                    >
+                      🔽
+                    </button>
+                    <input 
+                      type="checkbox" 
+                      checked={task.completed} 
+                      onChange={() => toggleComplete(task)}
+                      className="checkbox-custom"
+                    />
+                    <span className="task-title-text">{task.title}</span>
+                    {task.streak > 0 && <span className="streak-tag">🔥 {task.streak}</span>}
+                    <button 
+                      onClick={(e) => deleteTask(e, task._id)} 
+                      className="delete-btn"
+                    >
+                      <Trash2 size={20} />
+                    </button>
+                  </div>
 
-                {/* Permanent Display Area (Inline) */}
-                <TaskSubItems 
-                  task={task} 
-                  onUpdate={(updates) => updateTaskDetails(task._id, updates)}
-                  isSticky={false}
-                />
-                
-                {/* Creation Area (Dropdown) */}
-                {expandedTasks.includes(task._id) && (
-                  <TaskDetails 
+                  {/* Permanent Display Area (Inline) */}
+                  <TaskSubItems 
                     task={task} 
-                    onUpdate={(updates) => updateTaskDetails(task._id, updates)} 
+                    onUpdate={(updates) => updateTaskDetails(task._id, updates)}
+                    isSticky={false}
                   />
-                )}
+                  
+                  {/* Creation Area (Dropdown) */}
+                  {expandedTasks.includes(task._id) && (
+                    <TaskDetails 
+                      task={task} 
+                      onUpdate={(updates) => updateTaskDetails(task._id, updates)} 
+                    />
+                  )}
+                </div>
               </div>
             ))}
             {routineTasks.length === 0 && <p className="empty-msg">No routine tasks written yet...</p>}
@@ -384,22 +386,22 @@ function App() {
                       onExpand={(e) => toggleExpand(e, task._id)}
                       isExpanded={expandedTasks.includes(task._id)}
                       isOverdue={task.date && task.date < todayString}
-                    />
-                    
-                    {/* Permanent Display Area (Inline) */}
-                    <TaskSubItems 
-                      task={task} 
-                      onUpdate={(updates) => updateTaskDetails(task._id, updates)}
-                      isSticky={true}
-                    />
-
-                    {/* Creation Area (Dropdown) */}
-                    {expandedTasks.includes(task._id) && (
-                      <TaskDetails 
+                    >
+                      {/* Permanent Display Area (Inline) */}
+                      <TaskSubItems 
                         task={task} 
-                        onUpdate={(updates) => updateTaskDetails(task._id, updates)} 
+                        onUpdate={(updates) => updateTaskDetails(task._id, updates)}
+                        isSticky={true}
                       />
-                    )}
+
+                      {/* Creation Area (Dropdown) */}
+                      {expandedTasks.includes(task._id) && (
+                        <TaskDetails 
+                          task={task} 
+                          onUpdate={(updates) => updateTaskDetails(task._id, updates)} 
+                        />
+                      )}
+                    </StickyTask>
                   </div>
                 ))}
               </div>
@@ -413,7 +415,7 @@ function App() {
   );
 }
 
-function StickyTask({ task, onToggle, onDelete, isOverdue, onExpand, isExpanded }) {
+function StickyTask({ task, onToggle, onDelete, isOverdue, onExpand, isExpanded, children }) {
   return (
     <div className={`sticky-task-item ${task.completed ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}`}>
       <div className="sticky-title">
@@ -438,6 +440,7 @@ function StickyTask({ task, onToggle, onDelete, isOverdue, onExpand, isExpanded 
           <Trash2 size={18} />
         </button>
       </div>
+      {children}
     </div>
   );
 }
@@ -447,6 +450,12 @@ function TaskSubItems({ task, onUpdate, isSticky }) {
     e.stopPropagation();
     const updatedSubtasks = [...task.subtasks];
     updatedSubtasks[index].completed = !updatedSubtasks[index].completed;
+    onUpdate({ subtasks: updatedSubtasks, completed: task.completed });
+  };
+
+  const removeSubtask = (e, index) => {
+    e.stopPropagation();
+    const updatedSubtasks = task.subtasks.filter((_, i) => i !== index);
     onUpdate({ subtasks: updatedSubtasks, completed: task.completed });
   };
 
@@ -475,6 +484,13 @@ function TaskSubItems({ task, onUpdate, isSticky }) {
                 className="checkbox-tiny"
               />
               <span style={{ fontSize: '0.85rem' }}>{sub.title}</span>
+              <button 
+                onClick={(e) => removeSubtask(e, idx)} 
+                className="delete-mini"
+                style={{ marginLeft: 'auto' }}
+              >
+                x
+              </button>
             </div>
           ))}
         </div>

@@ -69,8 +69,8 @@ body {
 
 .logout-btn {
   position: absolute;
-  top: 0px;
-  right: 0px;
+  top: 20px;
+  right: 20px;
   background: none;
   border: none;
   font-family: var(--handwriting);
@@ -79,6 +79,7 @@ body {
   cursor: pointer;
   text-decoration: underline;
   opacity: 0.6;
+  z-index: 10;
 }
 
 .logout-btn:hover {
@@ -249,6 +250,12 @@ body {
 
 .expand-toggle.open {
   transform: rotate(180deg);
+}
+
+.routine-item-wrapper {
+  margin-bottom: 5px;
+  border-bottom: 1px dotted var(--line-color);
+  padding-bottom: 10px;
 }
 
 .routine-item.completed span {
@@ -568,7 +575,8 @@ body {
   }
 
   .logout-btn {
-    top: -25px;
+    top: 5px;
+    right: 5px;
   }
 }
 
