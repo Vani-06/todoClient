@@ -217,7 +217,7 @@ function App() {
             )}
 
             <button type="submit" className="submit-btn" disabled={!formData.title}>
-              <Plus size={18} /> Add to list
+              <Plus size={22} /> Add to list
             </button>
           </form>
 
@@ -233,7 +233,7 @@ function App() {
                 <span>{task.title}</span>
                 {task.streak > 0 && <span className="streak-tag">🔥 {task.streak}</span>}
                 <button onClick={() => deleteTask(task._id)} className="delete-btn">
-                  <Trash2 size={14} />
+                  <Trash2 size={20} />
                 </button>
               </div>
             ))}
@@ -295,7 +295,7 @@ function StickyTask({ task, onToggle, onDelete, isOverdue }) {
       <div className="sticky-meta">
         <span>📅 {task.date}</span>
         <button onClick={() => onDelete(task._id)} className="delete-btn">
-          <Trash2 size={12} />
+          <Trash2 size={18} />
         </button>
       </div>
     </div>
