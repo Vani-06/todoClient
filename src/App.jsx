@@ -89,7 +89,9 @@ function App() {
   };
 
   const routineTasks = tasks.filter(t => t.type === 'routine');
-  const nextTasks = tasks.filter(t => t.type === 'next');
+  const nextTasks = tasks
+    .filter(t => t.type === 'next')
+    .sort((a, b) => new Date(a.date) - new Date(b.date));
 
   // Global Streak Stats
   const totalStreaks = routineTasks.reduce((sum, t) => sum + (t.streak || 0), 0);
