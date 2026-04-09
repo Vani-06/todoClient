@@ -428,15 +428,23 @@ body {
 
 .streak-tag {
   font-family: var(--script);
-  font-size: 1.2rem; /* Slightly larger */
+  font-size: 1.2rem;
   font-weight: 700;
-  color: #fff; /* White text for better contrast */
-  background: var(--accent-pink); /* Solid pink background */
-  padding: 4px 10px;
+  color: #fff;
+  background: var(--accent-pink);
+  padding: 2px 8px; /* Tighter padding for a badge look */
   border-radius: 20px;
   margin-left: 10px;
   box-shadow: 0 4px 10px rgba(216, 167, 167, 0.4);
   animation: popIn 0.3s ease-out, pulse 2s infinite ease-in-out;
+  
+  /* Flexbox fix for text wrapping */
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  white-space: nowrap;
 }
 
 @keyframes pulse {
