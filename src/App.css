@@ -333,12 +333,13 @@ body {
 }
 
 .task-today {
-  background-color: #FFF8D6;
+  background-color: #FFEF00; /* More vibrant highlighter yellow */
+  border: 1px solid rgba(255, 215, 0, 0.5); /* Subtle golden border for alert feel */
   border-radius: 6px;
-  padding: 8px;
-  border-bottom: none !important; /* Remove dotted line for a clean highlighter look */
-  margin-bottom: 15px; /* Slightly more margin to breathe */
-  box-shadow: 2px 2px 5px rgba(0,0,0,0.02); /* Very subtle depth */
+  padding: 10px; /* SLightly more padding for visibility */
+  border-bottom: none !important;
+  margin-bottom: 15px;
+  box-shadow: 0 2px 8px rgba(255, 239, 0, 0.3); /* Yellowish glow for alert feel */
 }
 
 .sticky-task-item.overdue .sticky-title {
