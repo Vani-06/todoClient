@@ -17,6 +17,7 @@ function App() {
   const [customCategory, setCustomCategory] = useState('');
   const [authFormData, setAuthFormData] = useState({ name: '', pin: '' });
   const [loginError, setLoginError] = useState('');
+  const [expandedTasks, setExpandedTasks] = useState([]);
   
   const [formData, setFormData] = useState({
     title: '',
@@ -135,6 +136,23 @@ function App() {
     setCurrentUser(null);
     localStorage.removeItem('hippoUser');
     setTasks([]);
+  };
+
+  const toggleExpand = (id) => {
+    setExpandedTasks(prev => 
+      prev.includes(id) ? prev.filter(tid => tid !== id) : [...prev, id]
+    );
+  };
+
+  const updateTaskDetails = async (id, updates) => {
+    try {
+      await axios.put(`${API_BASE_URL}/${id}`, updates, {
+        headers: { 'x-user-id': currentUser._id }
+      });
+      fetchTasks();
+    } catch (error) {
+      console.error('Error updating task details:', error);
+    }
   };
 
   const routineTasks = tasks.filter(t => t.type === 'routine');
@@ -293,18 +311,33 @@ function App() {
 
           <div className="lined-list">
             {routineTasks.map(task => (
-              <div key={task._id} className={`routine-item ${task.completed ? 'completed' : ''}`}>
-                <input 
-                  type="checkbox" 
-                  checked={task.completed} 
-                  onChange={() => toggleComplete(task)}
-                  className="checkbox-custom"
-                />
-                <span>{task.title}</span>
-                {task.streak > 0 && <span className="streak-tag">🔥 {task.streak}</span>}
-                <button onClick={() => deleteTask(task._id)} className="delete-btn">
-                  <Trash2 size={20} />
-                </button>
+              <div key={task._id} className="task-container">
+                <div className={`routine-item ${task.completed ? 'completed' : ''}`}>
+                  <button 
+                    onClick={() => toggleExpand(task._id)} 
+                    className={`expand-toggle ${expandedTasks.includes(task._id) ? 'open' : ''}`}
+                  >
+                    🔽
+                  </button>
+                  <input 
+                    type="checkbox" 
+                    checked={task.completed} 
+                    onChange={() => toggleComplete(task)}
+                    className="checkbox-custom"
+                  />
+                  <span>{task.title}</span>
+                  {task.streak > 0 && <span className="streak-tag">🔥 {task.streak}</span>}
+                  <button onClick={() => deleteTask(task._id)} className="delete-btn">
+                    <Trash2 size={20} />
+                  </button>
+                </div>
+                
+                {expandedTasks.includes(task._id) && (
+                  <TaskDetails 
+                    task={task} 
+                    onUpdate={(updates) => updateTaskDetails(task._id, updates)} 
+                  />
+                )}
               </div>
             ))}
             {routineTasks.length === 0 && <p className="empty-msg">No routine tasks written yet...</p>}
@@ -330,13 +363,22 @@ function App() {
               <div key={cat} className={`sticky-note ${colorClass}`}>
                 <h3 className="sticky-hdr">{cat}</h3>
                 {catTasks.map(task => (
-                  <StickyTask 
-                    key={task._id} 
-                    task={task} 
-                    onToggle={toggleComplete} 
-                    onDelete={deleteTask} 
-                    isOverdue={task.date && task.date < todayString}
-                  />
+                  <div key={task._id} className="sticky-task-container">
+                    <StickyTask 
+                      task={task} 
+                      onToggle={toggleComplete} 
+                      onDelete={deleteTask} 
+                      onExpand={() => toggleExpand(task._id)}
+                      isExpanded={expandedTasks.includes(task._id)}
+                      isOverdue={task.date && task.date < todayString}
+                    />
+                    {expandedTasks.includes(task._id) && (
+                      <TaskDetails 
+                        task={task} 
+                        onUpdate={(updates) => updateTaskDetails(task._id, updates)} 
+                      />
+                    )}
+                  </div>
                 ))}
               </div>
             );
@@ -349,7 +391,7 @@ function App() {
   );
 }
 
-function StickyTask({ task, onToggle, onDelete, isOverdue }) {
+function StickyTask({ task, onToggle, onDelete, isOverdue, onExpand, isExpanded }) {
   return (
     <div className={`sticky-task-item ${task.completed ? 'completed' : ''} ${isOverdue ? 'overdue' : ''}`}>
       <div className="sticky-title">
@@ -360,13 +402,107 @@ function StickyTask({ task, onToggle, onDelete, isOverdue }) {
           className="checkbox-custom"
         />
         {isOverdue && <span className="overdue-icon">‼️</span>}
-        {task.title}
+        <span className="task-text">{task.title}</span>
+        <button 
+          onClick={onExpand} 
+          className={`expand-btn ${isExpanded ? 'open' : ''}`}
+        >
+          🔽
+        </button>
       </div>
       <div className="sticky-meta">
         <span>📅 {task.date}</span>
         <button onClick={() => onDelete(task._id)} className="delete-btn">
           <Trash2 size={18} />
         </button>
+      </div>
+    </div>
+  );
+}
+
+function TaskDetails({ task, onUpdate }) {
+  const [newSubtask, setNewSubtask] = useState('');
+  const [newLink, setNewLink] = useState('');
+
+  const handleAddSubtask = (e) => {
+    e.preventDefault();
+    if (!newSubtask) return;
+    const updatedSubtasks = [...(task.subtasks || []), { title: newSubtask, completed: false }];
+    onUpdate({ subtasks: updatedSubtasks });
+    setNewSubtask('');
+  };
+
+  const toggleSubtask = (index) => {
+    const updatedSubtasks = [...task.subtasks];
+    updatedSubtasks[index].completed = !updatedSubtasks[index].completed;
+    onUpdate({ subtasks: updatedSubtasks });
+  };
+
+  const handleAddLink = (e) => {
+    e.preventDefault();
+    if (!newLink) return;
+    const updatedLinks = [...(task.links || []), newLink];
+    onUpdate({ links: updatedLinks });
+    setNewLink('');
+  };
+
+  const removeLink = (index) => {
+    const updatedLinks = task.links.filter((_, i) => i !== index);
+    onUpdate({ links: updatedLinks });
+  };
+
+  return (
+    <div className="task-details">
+      <div className="subtasks-section">
+        <span className="details-subtitle">Subtasks:</span>
+        <div className="subtasks-list">
+          {task.subtasks?.map((sub, idx) => (
+            <div key={idx} className={`subtask-item ${sub.completed ? 'completed' : ''}`}>
+              <input 
+                type="checkbox" 
+                checked={sub.completed} 
+                onChange={() => toggleSubtask(idx)}
+                className="checkbox-tiny"
+              />
+              <span>{sub.title}</span>
+            </div>
+          ))}
+        </div>
+        <form onSubmit={handleAddSubtask} className="mini-input-group">
+          <input 
+            type="text" 
+            placeholder="New subtask..." 
+            value={newSubtask}
+            onChange={(e) => setNewSubtask(e.target.value)}
+            className="mini-input"
+          />
+          <button type="submit" className="mini-add-btn">+</button>
+        </form>
+      </div>
+
+      <div className="links-section">
+        <span className="details-subtitle">Documents & Links:</span>
+        <div className="links-list">
+          {task.links?.map((link, idx) => (
+            <div key={idx} className="link-item">
+              <span>🔗</span>
+              <a href={link.startsWith('http') ? link : `https://${link}`} target="_blank" rel="noreferrer">
+                {link}
+              </a>
+              <button onClick={() => removeLink(idx)} className="delete-mini">x</button>
+            </div>
+          ))}
+        </div>
+        <form onSubmit={handleAddLink} className="mini-input-group">
+          <input 
+            type="text" 
+            placeholder="Add URL..." 
+            value={newLink}
+            onChange={(e) => setNewLink(e.target.value)}
+            className="mini-input"
+          />
+          <button type="submit" className="mini-add-btn">+</button>
+        </form>
       </div>
     </div>
   );
