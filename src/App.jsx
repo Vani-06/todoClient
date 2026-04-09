@@ -70,7 +70,9 @@ function App() {
 
   const toggleComplete = async (id, currentStatus) => {
     try {
+      // Send the toggled status to the backend
       await axios.put(`${API_BASE_URL}/${id}`, { completed: !currentStatus });
+      // Freshly fetch tasks to ensure the UI is in sync with the server's record and streak logic
       fetchTasks();
     } catch (error) {
       console.error('Error toggling task:', error);
