@@ -108,7 +108,8 @@ function App() {
     }
   };
 
-  const deleteTask = async (id) => {
+  const deleteTask = async (e, id) => {
+    if (e && e.stopPropagation) e.stopPropagation();
     try {
       await axios.delete(`${API_BASE_URL}/${id}`, {
         headers: { 'x-user-id': currentUser._id }
@@ -326,9 +327,12 @@ function App() {
                     onChange={() => toggleComplete(task)}
                     className="checkbox-custom"
                   />
-                  <span>{task.title}</span>
+                  <span className="task-title-text">{task.title}</span>
                   {task.streak > 0 && <span className="streak-tag">🔥 {task.streak}</span>}
-                  <button onClick={() => deleteTask(task._id)} className="delete-btn">
+                  <button 
+                    onClick={(e) => deleteTask(e, task._id)} 
+                    className="delete-btn"
+                  >
                     <Trash2 size={20} />
                   </button>
                 </div>
@@ -413,7 +417,7 @@ function StickyTask({ task, onToggle, onDelete, isOverdue, onExpand, isExpanded 
       </div>
       <div className="sticky-meta">
         <span>📅 {task.date}</span>
-        <button onClick={() => onDelete(task._id)} className="delete-btn">
+        <button onClick={(e) => onDelete(e, task._id)} className="delete-btn">
           <Trash2 size={18} />
         </button>
       </div>
@@ -430,7 +434,8 @@ function TaskDetails({ task, onUpdate }) {
     e.stopPropagation();
     if (!newSubtask) return;
     const updatedSubtasks = [...(task.subtasks || []), { title: newSubtask, completed: false }];
-    onUpdate({ subtasks: updatedSubtasks });
+    // Ensure we send the current completed status of the parent task
+    onUpdate({ subtasks: updatedSubtasks, completed: task.completed });
     setNewSubtask('');
   };
 
@@ -438,7 +443,8 @@ function TaskDetails({ task, onUpdate }) {
     e.stopPropagation();
     const updatedSubtasks = [...task.subtasks];
     updatedSubtasks[index].completed = !updatedSubtasks[index].completed;
-    onUpdate({ subtasks: updatedSubtasks });
+    // Ensure we send the current completed status of the parent task
+    onUpdate({ subtasks: updatedSubtasks, completed: task.completed });
   };
 
   const handleAddLink = (e) => {
@@ -446,33 +452,37 @@ function TaskDetails({ task, onUpdate }) {
     e.stopPropagation();
     if (!newLink) return;
     const updatedLinks = [...(task.links || []), newLink];
-    onUpdate({ links: updatedLinks });
+    // Ensure we send the current completed status of the parent task
+    onUpdate({ links: updatedLinks, completed: task.completed });
     setNewLink('');
   };
 
   const removeLink = (e, index) => {
     e.stopPropagation();
     const updatedLinks = task.links.filter((_, i) => i !== index);
-    onUpdate({ links: updatedLinks });
+    // Ensure we send the current completed status of the parent task
+    onUpdate({ links: updatedLinks, completed: task.completed });
   };
 
   return (
     <div className="task-details" onClick={(e) => e.stopPropagation()}>
       <div className="subtasks-section">
         <span className="details-subtitle">Subtasks:</span>
-        <form onSubmit={handleAddSubtask} className="mini-input-group">
-          <input 
-            type="text" 
-            placeholder="New subtask..." 
-            value={newSubtask}
-            onChange={(e) => {
-              e.stopPropagation();
-              setNewSubtask(e.target.value);
-            }}
-            className="mini-input"
-          />
-          <button type="submit" className="mini-add-btn">+</button>
-        </form>
+        <div onClick={(e) => e.stopPropagation()}>
+          <form onSubmit={handleAddSubtask} className="mini-input-group">
+            <input 
+              type="text" 
+              placeholder="New subtask..." 
+              value={newSubtask}
+              onChange={(e) => {
+                e.stopPropagation();
+                setNewSubtask(e.target.value);
+              }}
+              className="mini-input"
+            />
+            <button type="submit" className="mini-add-btn">+</button>
+          </form>
+        </div>
         <div className="subtasks-list">
           {task.subtasks?.map((sub, idx) => (
             <div key={idx} className={`subtask-item ${sub.completed ? 'completed' : ''}`}>
@@ -490,19 +500,21 @@ function TaskDetails({ task, onUpdate }) {
 
       <div className="links-section">
         <span className="details-subtitle">Documents & Links:</span>
-        <form onSubmit={handleAddLink} className="mini-input-group">
-          <input 
-            type="text" 
-            placeholder="Add URL..." 
-            value={newLink}
-            onChange={(e) => {
-              e.stopPropagation();
-              setNewLink(e.target.value);
-            }}
-            className="mini-input"
-          />
-          <button type="submit" className="mini-add-btn">+</button>
-        </form>
+        <div onClick={(e) => e.stopPropagation()}>
+          <form onSubmit={handleAddLink} className="mini-input-group">
+            <input 
+              type="text" 
+              placeholder="Add URL..." 
+              value={newLink}
+              onChange={(e) => {
+                e.stopPropagation();
+                setNewLink(e.target.value);
+              }}
+              className="mini-input"
+            />
+            <button type="submit" className="mini-add-btn">+</button>
+          </form>
+        </div>
         <div className="links-list">
           {task.links?.map((link, idx) => (
             <div key={idx} className="link-item">
