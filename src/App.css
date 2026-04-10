@@ -779,17 +779,17 @@ body {
   border-radius: 4px;
 }
 
-.link-item a {
+.link-item a, .document-item a {
   text-decoration: none;
   color: var(--accent-taupe);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  white-space: normal;
+  word-break: break-all;
   flex: 1;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  line-height: 1.2;
 }
 
-.link-item a:hover {
+.link-item a:hover, .document-item a:hover {
   text-decoration: underline;
 }
 
@@ -798,11 +798,66 @@ body {
   border: none;
   color: var(--accent-taupe);
   cursor: pointer;
-  opacity: 0.5;
+  opacity: 0.4;
+  padding: 0 5px;
   font-size: 0.8rem;
 }
 
-.delete-mini:hover { opacity: 1; }
+.delete-mini:hover {
+  opacity: 1;
+}
+
+.mini-input-group.stack {
+  flex-direction: column;
+  gap: 10px;
+}
+
+.link-name-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.file-section {
+  margin-top: 15px;
+  padding-top: 10px;
+  border-top: 1px dotted var(--line-color);
+}
+
+.file-upload-wrapper {
+  margin-top: 8px;
+}
+
+.file-input-hidden {
+  display: none;
+}
+
+.file-upload-btn {
+  display: inline-block;
+  background-color: rgba(168, 139, 141, 0.1);
+  color: var(--accent-taupe);
+  padding: 8px 15px;
+  border-radius: 4px;
+  border: 1px solid var(--accent-taupe);
+  cursor: pointer;
+  font-family: var(--handwriting);
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.file-upload-btn:hover {
+  background-color: var(--accent-taupe);
+  color: white;
+}
+
+.document-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.5);
+  padding: 5px 10px;
+  border-radius: 4px;
+}
 
 @media (max-width: 768px) {
   .task-details {

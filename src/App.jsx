@@ -4,6 +4,10 @@ import { Plus, Trash2, CheckCircle2, Circle, Calendar, BookOpen } from 'lucide-r
 import './App.css';
 
 const API_BASE_URL = 'https://todoserver-qexi.onrender.com/api/tasks';
+const SERVER_URL = 'https://todoserver-qexi.onrender.com'; // Useful for static files
+// If running locally, you might want to use:
+// const SERVER_URL = 'http://localhost:5000';
+// const API_BASE_URL = `${SERVER_URL}/api/tasks`;
 const DEFAULT_CATEGORIES = ['Academic 📚', 'Hygiene & Self Care 🛁', 'Hobbies 🎨'];
 
 function App() {
@@ -154,6 +158,22 @@ function App() {
       fetchTasks();
     } catch (error) {
       console.error('Error updating task details:', error);
+    }
+  };
+
+  const handleFileUpload = async (taskId, file) => {
+    const formData = new FormData();
+    formData.append('document', file);
+    try {
+      await axios.post(`${API_BASE_URL}/${taskId}/upload`, formData, {
+        headers: { 
+          'x-user-id': currentUser._id,
+          'Content-Type': 'multipart/form-data'
+        }
+      });
+      fetchTasks();
+    } catch (error) {
+      console.error('Error uploading file:', error);
     }
   };
 
@@ -348,6 +368,7 @@ function App() {
                     task={task} 
                     onUpdate={(updates) => updateTaskDetails(task._id, updates)}
                     isSticky={false}
+                    serverUrl={SERVER_URL}
                   />
                   
                   {/* Creation Area (Dropdown) */}
@@ -355,6 +376,7 @@ function App() {
                     <TaskDetails 
                       task={task} 
                       onUpdate={(updates) => updateTaskDetails(task._id, updates)} 
+                      onUpload={(file) => handleFileUpload(task._id, file)}
                     />
                   )}
                 </div>
@@ -398,6 +420,7 @@ function App() {
                         task={task} 
                         onUpdate={(updates) => updateTaskDetails(task._id, updates)}
                         isSticky={true}
+                        serverUrl={SERVER_URL}
                       />
 
                       {/* Creation Area (Dropdown) */}
@@ -405,6 +428,7 @@ function App() {
                         <TaskDetails 
                           task={task} 
                           onUpdate={(updates) => updateTaskDetails(task._id, updates)} 
+                          onUpload={(file) => handleFileUpload(task._id, file)}
                         />
                       )}
                     </StickyTask>
@@ -451,7 +475,7 @@ function StickyTask({ task, onToggle, onDelete, isOverdue, isToday, onExpand, is
   );
 }
 
-function TaskSubItems({ task, onUpdate, isSticky }) {
+function TaskSubItems({ task, onUpdate, isSticky, serverUrl }) {
   const toggleSubtask = (e, index) => {
     e.stopPropagation();
     const updatedSubtasks = [...task.subtasks];
@@ -504,30 +528,59 @@ function TaskSubItems({ task, onUpdate, isSticky }) {
 
       {task.links && task.links.length > 0 && (
         <div className="links-list" style={{ marginTop: '5px' }}>
-          {task.links.map((link, idx) => (
-            <div key={idx} className="link-item">
-              <span>🔗</span>
-              <a 
-                href={link.startsWith('http') ? link : `https://${link}`} 
-                target="_blank" 
-                rel="noreferrer"
-                onClick={(e) => e.stopPropagation()}
-                style={{ fontSize: '0.85rem' }}
-              >
-                {link}
-              </a>
-              <button onClick={(e) => removeLink(e, idx)} className="delete-mini">x</button>
-            </div>
-          ))}
+          {task.links.map((link, idx) => {
+            const linkUrl = typeof link === 'string' ? link : link.url;
+            const linkName = typeof link === 'string' ? link : (link.name || link.url);
+            return (
+              <div key={idx} className="link-item">
+                <span>🔗</span>
+                <a 
+                  href={linkUrl.startsWith('http') ? linkUrl : `https://${linkUrl}`} 
+                  target="_blank" 
+                  rel="noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="task-link"
+                >
+                  {linkName}
+                </a>
+                <button onClick={(e) => removeLink(e, idx)} className="delete-mini">x</button>
+              </div>
+            );
+          })}
+        </div>
+      )}
+
+      {task.document && (
+        <div className="document-item" style={{ marginTop: '5px' }}>
+          <span>📄</span>
+          <a 
+            href={`${serverUrl}${task.document.url}`} 
+            target="_blank" 
+            rel="noreferrer"
+            onClick={(e) => e.stopPropagation()}
+            className="task-link"
+          >
+            {task.document.name}
+          </a>
+          <button 
+            onClick={(e) => {
+              e.stopPropagation();
+              onUpdate({ document: null, completed: task.completed });
+            }} 
+            className="delete-mini"
+          >
+            x
+          </button>
         </div>
       )}
     </div>
   );
 }
 
-function TaskDetails({ task, onUpdate }) {
+function TaskDetails({ task, onUpdate, onUpload }) {
   const [newSubtask, setNewSubtask] = useState('');
   const [newLink, setNewLink] = useState('');
+  const [newLinkName, setNewLinkName] = useState('');
 
   const handleAddSubtask = (e) => {
     e.preventDefault();
@@ -542,9 +595,17 @@ function TaskDetails({ task, onUpdate }) {
     e.preventDefault();
     e.stopPropagation();
     if (!newLink) return;
-    const updatedLinks = [...(task.links || []), newLink];
+    const updatedLinks = [...(task.links || []), { url: newLink, name: newLinkName }];
     onUpdate({ links: updatedLinks, completed: task.completed });
     setNewLink('');
+    setNewLinkName('');
+  };
+
+  const handleFileChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+      onUpload(file);
+    }
   };
 
   return (
@@ -570,7 +631,7 @@ function TaskDetails({ task, onUpdate }) {
 
       <div className="links-section">
         <div onClick={(e) => e.stopPropagation()}>
-          <form onSubmit={handleAddLink} className="mini-input-group">
+          <form onSubmit={handleAddLink} className="mini-input-group stack">
             <input 
               type="text" 
               placeholder="Add URL..." 
@@ -581,8 +642,35 @@ function TaskDetails({ task, onUpdate }) {
               }}
               className="mini-input"
             />
-            <button type="submit" className="mini-add-btn">+</button>
+            <div className="link-name-row">
+              <input 
+                type="text" 
+                placeholder="Name (optional)..." 
+                value={newLinkName}
+                onChange={(e) => {
+                  e.stopPropagation();
+                  setNewLinkName(e.target.value);
+                }}
+                className="mini-input"
+              />
+              <button type="submit" className="mini-add-btn">+</button>
+            </div>
           </form>
+        </div>
+      </div>
+
+      <div className="file-section">
+        <span className="details-subtitle">Attach Document:</span>
+        <div className="file-upload-wrapper">
+          <input 
+            type="file" 
+            id={`file-upload-${task._id}`}
+            onChange={handleFileChange}
+            className="file-input-hidden"
+          />
+          <label htmlFor={`file-upload-${task._id}`} className="file-upload-btn">
+             📁 {task.document ? 'Change Document' : 'Upload PDF/Doc'}
+          </label>
         </div>
       </div>
     </div>
