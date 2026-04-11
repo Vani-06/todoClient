@@ -3,10 +3,8 @@ import axios from 'axios';
 import { Plus, Trash2, CheckCircle2, Circle, Calendar, BookOpen, BarChart2, Layout } from 'lucide-react';
 import './App.css';
 
-// const API_BASE_URL = 'https://todoserver-qexi.onrender.com/api/tasks';
-// const SERVER_URL = 'https://todoserver-qexi.onrender.com'; // Useful for static files
-// If running locally, you might want to use:
-const SERVER_URL = 'http://localhost:5000';
+// API Configuration: Uses environment variable in production, falls back to localhost for development
+const SERVER_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
 const API_BASE_URL = `${SERVER_URL}/api/tasks`;
 const DEFAULT_CATEGORIES = ['Academic 📚', 'Hygiene & Self Care 🛁', 'Hobbies 🎨'];
 
