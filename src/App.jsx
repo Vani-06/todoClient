@@ -188,14 +188,25 @@ function App() {
     });
   };
 
-  const handleCancelEdit = () => {
+  const handleCancelEdit = (e) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     setEditingTaskId(null);
     setEditFormData({ title: '', date: '', category: '' });
   };
 
-  const handleSaveEdit = async (taskId) => {
+  const handleSaveEdit = async (e, taskId, currentCompletedStatus) => {
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
     try {
-      await axios.put(`${API_BASE_URL}/${taskId}`, editFormData, {
+      await axios.put(`${API_BASE_URL}/${taskId}`, {
+        ...editFormData,
+        completed: currentCompletedStatus
+      }, {
         headers: { 'x-user-id': currentUser._id }
       });
       setEditingTaskId(null);
@@ -388,8 +399,8 @@ function App() {
                     <div className="task-actions-right">
                       {editingTaskId === task._id ? (
                         <>
-                          <button onClick={() => handleSaveEdit(task._id)} className="save-btn" title="Save">💾</button>
-                          <button onClick={handleCancelEdit} className="cancel-btn" title="Cancel">❌</button>
+                          <button type="button" onClick={(e) => handleSaveEdit(e, task._id, task.completed)} className="save-btn" title="Save">💾</button>
+                          <button type="button" onClick={(e) => handleCancelEdit(e)} className="cancel-btn" title="Cancel">❌</button>
                         </>
                       ) : (
                         <>
@@ -466,8 +477,8 @@ function App() {
                       editFormData={editFormData}
                       setEditFormData={setEditFormData}
                       onStartEdit={() => handleStartEdit(task)}
-                      onSaveEdit={() => handleSaveEdit(task._id)}
-                      onCancelEdit={handleCancelEdit}
+                      onSaveEdit={(e) => handleSaveEdit(e, task._id, task.completed)}
+                      onCancelEdit={(e) => handleCancelEdit(e)}
                       categories={categories}
                     >
                       {/* Permanent Display Area (Inline) */}
@@ -561,8 +572,8 @@ function StickyTask({
         <div className="sticky-actions">
           {isEditing ? (
             <>
-              <button onClick={onSaveEdit} className="save-btn mini" title="Save">💾</button>
-              <button onClick={onCancelEdit} className="cancel-btn mini" title="Cancel">❌</button>
+              <button type="button" onClick={onSaveEdit} className="save-btn mini" title="Save">💾</button>
+              <button type="button" onClick={onCancelEdit} className="cancel-btn mini" title="Cancel">❌</button>
             </>
           ) : (
             <>
