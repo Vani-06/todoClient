@@ -1,13 +1,13 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
-import { Plus, Trash2, CheckCircle2, Circle, Calendar, BookOpen } from 'lucide-react';
+import { Plus, Trash2, CheckCircle2, Circle, Calendar, BookOpen, BarChart2, Layout } from 'lucide-react';
 import './App.css';
 
-const API_BASE_URL = 'https://todoserver-qexi.onrender.com/api/tasks';
-const SERVER_URL = 'https://todoserver-qexi.onrender.com'; // Useful for static files
+// const API_BASE_URL = 'https://todoserver-qexi.onrender.com/api/tasks';
+// const SERVER_URL = 'https://todoserver-qexi.onrender.com'; // Useful for static files
 // If running locally, you might want to use:
-// const SERVER_URL = 'http://localhost:5000';
-// const API_BASE_URL = `${SERVER_URL}/api/tasks`;
+const SERVER_URL = 'http://localhost:5000';
+const API_BASE_URL = `${SERVER_URL}/api/tasks`;
 const DEFAULT_CATEGORIES = ['Academic 📚', 'Hygiene & Self Care 🛁', 'Hobbies 🎨'];
 
 function App() {
@@ -24,6 +24,9 @@ function App() {
   const [expandedTasks, setExpandedTasks] = useState([]);
   const [editingTaskId, setEditingTaskId] = useState(null);
   const [editFormData, setEditFormData] = useState({ title: '', date: '', category: '' });
+  const [activeTab, setActiveTab] = useState('planner');
+  const [goals, setGoals] = useState([]);
+  const [newGoalTitle, setNewGoalTitle] = useState('');
   
   const [formData, setFormData] = useState({
     title: '',
@@ -50,8 +53,76 @@ function App() {
   useEffect(() => {
     if (currentUser) {
       fetchTasks();
+      fetchGoals();
     }
   }, [currentUser]);
+
+  const fetchGoals = async () => {
+    try {
+      const response = await axios.get(`${API_BASE_URL.replace('/tasks', '/goals')}`, {
+        headers: { 'x-user-id': currentUser._id }
+      });
+      setGoals(response.data);
+    } catch (error) {
+      console.error('Error fetching goals:', error);
+    }
+  };
+
+  const handleCreateGoal = async (e) => {
+    // Prevent default form behavior and isolate the event
+    if (e) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    
+    if (!newGoalTitle.trim()) return;
+
+    try {
+      // Step 2: Ensure userId is in the payload as requested
+      const payload = { 
+        title: newGoalTitle, 
+        userId: currentUser._id 
+      };
+      
+      const response = await axios.post(`${API_BASE_URL.replace('/tasks', '/goals')}`, 
+        payload,
+        { headers: { 'x-user-id': currentUser._id } }
+      );
+      
+      // Update local state immediately for instant feedback
+      const newGoal = response.data;
+      setGoals(prev => [...prev, newGoal]);
+      
+      // Step 2: Clear input field on success
+      setNewGoalTitle('');
+    } catch (err) {
+      // Step 2: Explicit error logging as requested
+      console.error("Goal creation failed:", err);
+      alert("Failed to create goal. Check console for details.");
+    }
+  };
+
+  const handleGoalCheckIn = async (goalId) => {
+    try {
+      await axios.put(`${API_BASE_URL.replace('/tasks', '/goals')}/${goalId}/checkin`, {}, {
+        headers: { 'x-user-id': currentUser._id }
+      });
+      fetchGoals();
+    } catch (error) {
+      alert(error.response?.data?.message || 'Check-in failed');
+    }
+  };
+
+  const handleDeleteGoal = async (goalId) => {
+    try {
+      await axios.delete(`${API_BASE_URL.replace('/tasks', '/goals')}/${goalId}`, {
+        headers: { 'x-user-id': currentUser._id }
+      });
+      fetchGoals();
+    } catch (error) {
+      console.error('Error deleting goal:', error);
+    }
+  };
 
   const fetchTasks = async () => {
     try {
@@ -280,6 +351,21 @@ function App() {
           </div>
         </div>
       </header>
+      
+      <nav className="app-nav">
+        <button 
+          className={`nav-item ${activeTab === 'planner' ? 'active' : ''}`}
+          onClick={() => setActiveTab('planner')}
+        >
+          📝 Daily Planner
+        </button>
+        <button 
+          className={`nav-item ${activeTab === 'goals' ? 'active' : ''}`}
+          onClick={() => setActiveTab('goals')}
+        >
+          📈 Goal Analytics
+        </button>
+      </nav>
 
       {/* Streak Stats Summary */}
       <div className="streak-stats-row">
@@ -295,7 +381,8 @@ function App() {
         </div>
       </div>
 
-      <main className="planner-grid">
+      {activeTab === 'planner' ? (
+        <main className="planner-grid">
         {/* Left Column: Brain Dump & Routine */}
         <section className="brain-dump">
           <h2 className="column-title">Brain dump... 🎀</h2>
@@ -507,6 +594,16 @@ function App() {
           {nextTasks.length === 0 && <p className="empty-msg">No upcoming tasks today!</p>}
         </section>
       </main>
+      ) : (
+        <GoalsPage 
+          goals={goals} 
+          onCheckIn={handleGoalCheckIn} 
+          onCreate={handleCreateGoal}
+          onDelete={handleDeleteGoal}
+          newTitle={newGoalTitle}
+          setNewTitle={setNewGoalTitle}
+        />
+      )}
     </div>
   );
 }
@@ -787,6 +884,90 @@ function TaskDetails({ task, onUpdate, onUpload }) {
              📁 {task.document ? 'Change Document' : 'Upload PDF/Doc'}
           </label>
         </div>
+      </div>
+    </div>
+  );
+}
+
+function GoalsPage({ goals, onCheckIn, onCreate, onDelete, newTitle, setNewTitle }) {
+  const today = new Date().toISOString().split('T')[0];
+
+  // Generate last 90 days for the heatmap
+  const getHeatmapDays = () => {
+    const days = [];
+    const end = new Date();
+    for (let i = 89; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(end.getDate() - i);
+      days.push(d.toISOString().split('T')[0]);
+    }
+    return days;
+  };
+
+  const heatmapDays = getHeatmapDays();
+
+  return (
+    <div className="goals-view">
+      <section className="goals-creation">
+        <h2 className="column-title">Set a new goal... 🎯</h2>
+        <form onSubmit={onCreate} className="task-form goal-form">
+          <input
+            type="text"
+            placeholder="What is your long-term goal?"
+            value={newTitle}
+            onChange={(e) => setNewTitle(e.target.value)}
+            className="input-field"
+            autoFocus
+          />
+          <button 
+            type="button" 
+            onClick={onCreate} 
+            className="submit-btn" 
+            disabled={!newTitle.trim()}
+          >
+            <Plus size={22} /> Set Goal
+          </button>
+        </form>
+      </section>
+
+      <div className="goals-grid">
+        {goals.map(goal => (
+          <div key={goal._id} className="goal-card">
+            <div className="goal-hdr">
+              <h3 className="goal-title">{goal.title}</h3>
+              <button onClick={() => onDelete(goal._id)} className="delete-mini">x</button>
+            </div>
+            <div className="goal-body">
+              <div className="streak-display">
+                <span className="streak-val">🔥 {goal.currentStreak}</span>
+                <span className="streak-lbl">Day Streak</span>
+              </div>
+              <button 
+                onClick={() => onCheckIn(goal._id)}
+                className={`checkin-btn ${goal.lastCheckIn === today ? 'checked' : ''}`}
+                disabled={goal.lastCheckIn === today}
+              >
+                {goal.lastCheckIn === today ? 'Done for Today ✨' : 'Check In Today 📌'}
+              </button>
+            </div>
+
+            {/* GitHub-style Activity Heatmap */}
+            <div className="heatmap-container">
+              {heatmapDays.map(day => (
+                <div 
+                  key={day}
+                  className={`heatmap-square ${goal.history?.includes(day) ? 'active-square' : ''}`}
+                  title={day}
+                />
+              ))}
+            </div>
+
+            <div className="goal-footer">
+              <span>Longest: {goal.longestStreak}</span>
+            </div>
+          </div>
+        ))}
+        {goals.length === 0 && <p className="empty-msg">No goals set yet. Start tracking your habits!</p>}
       </div>
     </div>
   );
