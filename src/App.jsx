@@ -22,6 +22,8 @@ function App() {
   const [authFormData, setAuthFormData] = useState({ name: '', pin: '' });
   const [loginError, setLoginError] = useState('');
   const [expandedTasks, setExpandedTasks] = useState([]);
+  const [editingTaskId, setEditingTaskId] = useState(null);
+  const [editFormData, setEditFormData] = useState({ title: '', date: '', category: '' });
   
   const [formData, setFormData] = useState({
     title: '',
@@ -174,6 +176,32 @@ function App() {
       fetchTasks();
     } catch (error) {
       console.error('Error uploading file:', error);
+    }
+  };
+
+  const handleStartEdit = (task) => {
+    setEditingTaskId(task._id);
+    setEditFormData({ 
+      title: task.title, 
+      date: task.date || '', 
+      category: task.category 
+    });
+  };
+
+  const handleCancelEdit = () => {
+    setEditingTaskId(null);
+    setEditFormData({ title: '', date: '', category: '' });
+  };
+
+  const handleSaveEdit = async (taskId) => {
+    try {
+      await axios.put(`${API_BASE_URL}/${taskId}`, editFormData, {
+        headers: { 'x-user-id': currentUser._id }
+      });
+      setEditingTaskId(null);
+      fetchTasks();
+    } catch (error) {
+      console.error('Error saving task edit:', error);
     }
   };
 
@@ -343,23 +371,43 @@ function App() {
                         onChange={() => toggleComplete(task)}
                         className="checkbox-custom"
                       />
-                      <span className="task-title-text">{task.title}</span>
+                      {editingTaskId === task._id ? (
+                        <input 
+                          type="text" 
+                          value={editFormData.title}
+                          onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+                          className="edit-mode-input title"
+                          autoFocus
+                        />
+                      ) : (
+                        <span className="task-title-text">{task.title}</span>
+                      )}
                       {task.streak > 0 && <span className="streak-tag">🔥 {task.streak}</span>}
                     </div>
 
                     <div className="task-actions-right">
-                      <button 
-                        onClick={(e) => toggleExpand(e, task._id)} 
-                        className={`expand-toggle ${expandedTasks.includes(task._id) ? 'open' : ''}`}
-                      >
-                        🔽
-                      </button>
-                      <button 
-                        onClick={(e) => deleteTask(e, task._id)} 
-                        className="delete-btn"
-                      >
-                        <Trash2 size={20} />
-                      </button>
+                      {editingTaskId === task._id ? (
+                        <>
+                          <button onClick={() => handleSaveEdit(task._id)} className="save-btn" title="Save">💾</button>
+                          <button onClick={handleCancelEdit} className="cancel-btn" title="Cancel">❌</button>
+                        </>
+                      ) : (
+                        <>
+                          <button onClick={() => handleStartEdit(task)} className="edit-btn" title="Edit">✏️</button>
+                          <button 
+                            onClick={(e) => toggleExpand(e, task._id)} 
+                            className={`expand-toggle ${expandedTasks.includes(task._id) ? 'open' : ''}`}
+                          >
+                            🔽
+                          </button>
+                          <button 
+                            onClick={(e) => deleteTask(e, task._id)} 
+                            className="delete-btn"
+                          >
+                            <Trash2 size={20} />
+                          </button>
+                        </>
+                      )}
                     </div>
                   </div>
 
@@ -414,6 +462,13 @@ function App() {
                       isExpanded={expandedTasks.includes(task._id)}
                       isOverdue={task.date && task.date < todayString}
                       isToday={task.date === todayString}
+                      isEditing={editingTaskId === task._id}
+                      editFormData={editFormData}
+                      setEditFormData={setEditFormData}
+                      onStartEdit={() => handleStartEdit(task)}
+                      onSaveEdit={() => handleSaveEdit(task._id)}
+                      onCancelEdit={handleCancelEdit}
+                      categories={categories}
                     >
                       {/* Permanent Display Area (Inline) */}
                       <TaskSubItems 
@@ -445,7 +500,11 @@ function App() {
   );
 }
 
-function StickyTask({ task, onToggle, onDelete, isOverdue, isToday, onExpand, isExpanded, children }) {
+function StickyTask({ 
+  task, onToggle, onDelete, isOverdue, isToday, onExpand, isExpanded, 
+  isEditing, editFormData, setEditFormData, onStartEdit, onSaveEdit, onCancelEdit, 
+  categories, children 
+}) {
   return (
     <div className={`sticky-task-item ${task.completed ? 'completed' : ''} ${isOverdue ? 'overdue' : ''} ${isToday ? 'task-today' : ''}`}>
       <div className="sticky-title">
@@ -456,7 +515,19 @@ function StickyTask({ task, onToggle, onDelete, isOverdue, isToday, onExpand, is
           className="checkbox-custom"
         />
         {isOverdue && <span className="overdue-icon">‼️</span>}
-        <span className="task-text">{task.title}</span>
+        
+        {isEditing ? (
+          <input 
+            type="text"
+            value={editFormData.title}
+            onChange={(e) => setEditFormData({ ...editFormData, title: e.target.value })}
+            className="edit-mode-input sticky-title-input"
+            autoFocus
+          />
+        ) : (
+          <span className="task-text">{task.title}</span>
+        )}
+        
         <button 
           onClick={onExpand} 
           className={`expand-btn ${isExpanded ? 'open' : ''}`}
@@ -465,10 +536,43 @@ function StickyTask({ task, onToggle, onDelete, isOverdue, isToday, onExpand, is
         </button>
       </div>
       <div className="sticky-meta">
-        <span>📅 {task.date}</span>
-        <button onClick={(e) => onDelete(e, task._id)} className="delete-btn">
-          <Trash2 size={18} />
-        </button>
+        {isEditing ? (
+          <div className="sticky-edit-meta">
+            <input 
+              type="date"
+              value={editFormData.date}
+              onChange={(e) => setEditFormData({ ...editFormData, date: e.target.value })}
+              className="edit-mode-input date-input"
+            />
+            <select
+              value={editFormData.category}
+              onChange={(e) => setEditFormData({ ...editFormData, category: e.target.value })}
+              className="edit-mode-input category-select"
+            >
+              {categories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+          </div>
+        ) : (
+          <span>📅 {task.date}</span>
+        )}
+        
+        <div className="sticky-actions">
+          {isEditing ? (
+            <>
+              <button onClick={onSaveEdit} className="save-btn mini" title="Save">💾</button>
+              <button onClick={onCancelEdit} className="cancel-btn mini" title="Cancel">❌</button>
+            </>
+          ) : (
+            <>
+              <button onClick={onStartEdit} className="edit-btn mini" title="Edit">✏️</button>
+              <button onClick={(e) => onDelete(e, task._id)} className="delete-btn">
+                <Trash2 size={18} />
+              </button>
+            </>
+          )}
+        </div>
       </div>
       {children}
     </div>
