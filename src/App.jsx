@@ -30,7 +30,9 @@ function App() {
     title: '',
     category: DEFAULT_CATEGORIES[0],
     type: 'routine',
-    date: 'Everyday'
+    date: 'Everyday',
+    isWeekly: false,
+    dayOfWeek: 'Monday'
   });
 
   // Date Logic
@@ -47,6 +49,13 @@ function App() {
   const dateString = today.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' });
   const dayIndex = today.getDay(); // 0 (Su) to 6 (Sa)
   const daysShort = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+  const dayNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+  // Smart Filtering helpers
+  const todayName = dayNames[dayIndex];
+  const tomorrow = new Date();
+  tomorrow.setDate(today.getDate() + 1);
+  const tomorrowName = dayNames[tomorrow.getDay()];
 
   useEffect(() => {
     if (currentUser) {
@@ -169,7 +178,14 @@ function App() {
   const toggleComplete = async (task) => {
     try {
       const headers = { 'x-user-id': currentUser._id };
-      if (task.type === 'next') {
+      
+      if (task.isWeekly) {
+        // Toggle recurring weekly task based on date
+        const alreadyDoneToday = task.lastCompletedDate === todayString;
+        await axios.put(`${API_BASE_URL}/${task._id}`, {
+          lastCompletedDate: alreadyDoneToday ? null : todayString
+        }, { headers });
+      } else if (task.type === 'next') {
         // Feature: Auto-Delete on Check for "next" tasks
         await axios.delete(`${API_BASE_URL}/${task._id}`, { headers });
       } else {
@@ -287,11 +303,20 @@ function App() {
 
   const routineTasks = tasks.filter(t => t.type === 'routine');
   const nextTasks = tasks
-    .filter(t => t.type === 'next')
-    .sort((a, b) => new Date(a.date) - new Date(b.date));
+    .filter(t => {
+      if (t.type !== 'next') return false;
+      if (!t.isWeekly) return true; // Show normal tasks
+      // Show weekly recurring tasks only if due today or tomorrow
+      return t.dayOfWeek === todayName || t.dayOfWeek === tomorrowName;
+    })
+    .sort((a, b) => {
+      if (a.isWeekly && !b.isWeekly) return 1;
+      if (!a.isWeekly && b.isWeekly) return -1;
+      return new Date(a.date) - new Date(b.date);
+    });
 
-  // Overdue Logic
-  const overdueCount = nextTasks.filter(t => t.date && t.date < todayString).length;
+  // Overdue Logic (only for one-time tasks)
+  const overdueCount = nextTasks.filter(t => !t.isWeekly && t.date && t.date < todayString).length;
 
   // Global Streak Stats
   const totalStreaks = routineTasks.reduce((sum, t) => sum + (t.streak || 0), 0);
@@ -442,12 +467,33 @@ function App() {
             )}
 
             {formData.type === 'next' && (
-              <input
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="input-field"
-              />
+              <div className="next-task-options">
+                <select 
+                  value={formData.isWeekly ? 'weekly' : 'once'}
+                  onChange={(e) => setFormData({ ...formData, isWeekly: e.target.value === 'weekly' })}
+                  className="input-field"
+                >
+                  <option value="once">One-time Date</option>
+                  <option value="weekly">Repeats Every...</option>
+                </select>
+
+                {formData.isWeekly ? (
+                  <select
+                    value={formData.dayOfWeek}
+                    onChange={(e) => setFormData({ ...formData, dayOfWeek: e.target.value })}
+                    className="input-field"
+                  >
+                    {dayNames.map(day => <option key={day} value={day}>{day}</option>)}
+                  </select>
+                ) : (
+                  <input
+                    type="date"
+                    value={formData.date}
+                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                    className="input-field"
+                  />
+                )}
+              </div>
             )}
 
             <button type="submit" className="submit-btn" disabled={!formData.title}>
@@ -507,7 +553,6 @@ function App() {
                     </div>
                   </div>
 
-                  {/* Permanent Display Area (Inline) */}
                   <TaskSubItems 
                     task={task} 
                     onUpdate={(updates) => updateTaskDetails(task._id, updates)}
@@ -515,7 +560,6 @@ function App() {
                     serverUrl={SERVER_URL}
                   />
                   
-                  {/* Creation Area (Dropdown) */}
                   {expandedTasks.includes(task._id) && (
                     <TaskDetails 
                       task={task} 
@@ -530,19 +574,16 @@ function App() {
           </div>
         </section>
 
-        {/* Right Column: Upcoming Stickies */}
         <section className="upcoming-section">
           <h2 className="column-title">
             Upcoming / Next ☁️
             {overdueCount > 0 && <span className="overdue-counter">🚨 {overdueCount} Overdue</span>}
           </h2>
           
-          {/* Categorized Sticky Notes */}
           {categories.map((cat, index) => {
             const catTasks = nextTasks.filter(t => t.category === cat);
             if (catTasks.length === 0) return null;
 
-            // Cycle colors for stickies
             const colorClass = index % 3 === 0 ? 'pink' : index % 3 === 1 ? 'taupe' : 'yellow';
 
             return (
@@ -556,8 +597,8 @@ function App() {
                       onDelete={deleteTask} 
                       onExpand={(e) => toggleExpand(e, task._id)}
                       isExpanded={expandedTasks.includes(task._id)}
-                      isOverdue={task.date && task.date < todayString}
-                      isToday={task.date === todayString}
+                      isOverdue={!task.isWeekly && task.date && task.date < todayString}
+                      isToday={task.isWeekly ? (task.dayOfWeek === todayName) : (task.date === todayString)}
                       isEditing={editingTaskId === task._id}
                       editFormData={editFormData}
                       setEditFormData={setEditFormData}
@@ -565,8 +606,8 @@ function App() {
                       onSaveEdit={(e) => handleSaveEdit(e, task._id, task.completed)}
                       onCancelEdit={(e) => handleCancelEdit(e)}
                       categories={categories}
+                      isWeeklyCompleted={task.isWeekly && task.lastCompletedDate === todayString}
                     >
-                      {/* Permanent Display Area (Inline) */}
                       <TaskSubItems 
                         task={task} 
                         onUpdate={(updates) => updateTaskDetails(task._id, updates)}
@@ -574,7 +615,6 @@ function App() {
                         serverUrl={SERVER_URL}
                       />
 
-                      {/* Creation Area (Dropdown) */}
                       {expandedTasks.includes(task._id) && (
                         <TaskDetails 
                           task={task} 
@@ -609,14 +649,16 @@ function App() {
 function StickyTask({ 
   task, onToggle, onDelete, isOverdue, isToday, onExpand, isExpanded, 
   isEditing, editFormData, setEditFormData, onStartEdit, onSaveEdit, onCancelEdit, 
-  categories, children 
+  categories, isWeeklyCompleted, children 
 }) {
+  const isActuallyCompleted = task.isWeekly ? isWeeklyCompleted : task.completed;
+
   return (
-    <div className={`sticky-task-item ${task.completed ? 'completed' : ''} ${isOverdue ? 'overdue' : ''} ${isToday ? 'task-today' : ''}`}>
+    <div className={`sticky-task-item ${isActuallyCompleted ? 'completed' : ''} ${isOverdue ? 'overdue' : ''} ${isToday ? 'task-today' : ''}`}>
       <div className="sticky-title">
         <input 
           type="checkbox" 
-          checked={task.completed} 
+          checked={isActuallyCompleted} 
           onChange={() => onToggle(task)}
           className="checkbox-custom"
         />
@@ -661,7 +703,7 @@ function StickyTask({
             </select>
           </div>
         ) : (
-          <span>📅 {task.date}</span>
+          <span>{task.isWeekly ? `🔄 Every ${task.dayOfWeek}` : `📅 ${task.date}`}</span>
         )}
         
         <div className="sticky-actions">
